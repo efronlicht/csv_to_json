@@ -26,8 +26,8 @@ const (
 type Record struct {
 	ID     uint64 `json:"id"`
 	First  string `json:"first"`
-	Last   string `json:"last"`
 	Middle string `json:"middle,omitempty"`
+	Last   string `json:"last"`
 	Phone  string `json:"phone"`
 }
 
@@ -56,16 +56,16 @@ func toRecord(fields []string) (rec Record, err error) {
 	}
 }
 func validFirst(name string) bool {
-	return len(name) < 15 && len(name) > 0
+	return len(name) > 0 && len(name) <= 15
 }
 
 var validLast = validFirst
 
 func validMiddle(name string) bool {
-	return len(name) < 15
+	return len(name) <= 15
 }
 
-var validPhoneRE = regexp.MustCompile("[0-9]{3}-[0-9]{3}-[0-9]{4}")
+var validPhoneRE = regexp.MustCompile("^[0-9]{3}-[0-9]{3}-[0-9]{4}$")
 
 func validPhone(phone string) bool {
 	return validPhoneRE.Match([]byte(phone))
