@@ -11,7 +11,7 @@ import (
 const ERROR_HEADER = "LINE_NUM,ERROR_MSG"
 
 //errorsToCSV formats errors as CSV in the following format:
-//"LINE_NUM,ERROR_MSG" / HEADER
+//"LINE_NUM,ERROR_MSG"
 //"2,cosmic ray"
 func errorsToCSV(errs []csv.ParseError) []byte {
 	lines := make([]string, len(errs)+1)
@@ -34,4 +34,5 @@ func writeRecordsToFileAsJSON(filename string, records []Record) error {
 		return err
 	}
 	return ioutil.WriteFile(filename, asJSON, 0644)
+
 }

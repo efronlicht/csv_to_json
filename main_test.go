@@ -11,7 +11,6 @@ import (
 )
 
 //integration test. sets Os.Args manually and runs main
-
 func Test_main(t *testing.T) {
 	const testCSVData = "INTERNAL_ID,FIRST_NAME,MIDDLE_NAME,LAST_NAME,PHONE_NUM\n" +
 		"\n" + "12345678,john,q,smith,555-555-5555" +

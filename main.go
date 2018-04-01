@@ -44,7 +44,6 @@ func (d dirs) jsonToCSV(timeout time.Duration) error {
 	go findNewCSVs(d.in, csvs, timeout)
 
 	for csv := range csvs { // this is an indefinite loop unless processCSV hits an error
-		log.Print(csv)
 		if err := d.processCSV(csv); err != nil {
 			return err
 			// this is not especially fail-tolerant;
