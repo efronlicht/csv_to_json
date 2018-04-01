@@ -5,18 +5,29 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 )
 
-//monitor the the input directory for new files ending in .csv
-//for each file in the directory the
-//create a file in outfolder writing output as JSON to
-//the output directory
+const (
+	DEFAULT_TIMEOUT = time.Hour
+	TEST_TIMEOUT    = 250 * time.Millisecond
+)
+
+var is_test = false
+
 func main() {
-	dirs, ok := getDirsFromArgs(os.Args)
-	if !ok {
-		log.Fatal("must specify exactly three directories: CSV_INPUT, JSON_OUTPUT, ERROR_OUPUT")
+	var timeout time.Duration
+	if is_test {
+		timeout = TEST_TIMEOUT
+	} else {
+		timeout = DEFAULT_TIMEOUT
 	}
-	if err := dirs.jsonToCSV(); err != nil {
+	dirs, err := getDirsFromArgs(os.Args)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := dirs.jsonToCSV(timeout); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -25,11 +36,15 @@ type dirs struct {
 	in, out, err string
 }
 
-func (d dirs) jsonToCSV() error {
+//monitor the the input directory for new files ending in .csv.
+//for each file in the directory, create a file in outfolder writing output as JSON to
+//the output directory
+func (d dirs) jsonToCSV(timeout time.Duration) error {
 	csvs := make(chan string)
-	go findNewCSVs(d.in, csvs)
+	go findNewCSVs(d.in, csvs, timeout)
 
-	for csv := range csvs {
+	for csv := range csvs { // this is an indefinite loop unless processCSV hits an error
+		log.Print(csv)
 		if err := d.processCSV(csv); err != nil {
 			return err
 			// this is not especially fail-tolerant;
@@ -40,22 +55,27 @@ func (d dirs) jsonToCSV() error {
 	return nil
 }
 
+//processCSV processes the indivudal CSV specified by path
+//given directories $in, $out, and $err, and filename "foo.csv",
+//read from "$in/foo.csv"
 func (d dirs) processCSV(path string) error {
-	records, parseErrs, err := readCSV(path)
+	records, parseErrs, err := readCSVFile(d.inPath(path))
 	if err != nil {
 		return err
 	}
+	log.Printf("read data from %s", d.inPath(path))
 
-	outFile := d.outPath(path)
-	if err := writeRecordsToFileAsJSON(outFile, records); err != nil {
+	if err = writeRecordsToFileAsJSON(d.outPath(path), records); err != nil {
 		return err
 	}
-
-	errFile := d.errPath(path)
-	if err := writeErrorsToFileAsCSV(errFile, parseErrs); err != nil {
+	log.Printf("wrote records as json to %s", d.outPath(path))
+	if err = writeErrorsToFileAsCSV(d.errPath(path), parseErrs); err != nil {
 		return err
 	}
-
+	if err := deleteCSV(d.inPath(path)); err != nil {
+		return err
+	}
+	log.Printf("wrote parseErrors to %s", d.errPath(path))
 	return nil
 }
 
@@ -71,17 +91,28 @@ func deleteCSV(path string) error {
 }
 
 //get input, output, and error directories
-func getDirsFromArgs(args []string) (dirs, bool) {
-	if len(args) != 3 {
-		return dirs{}, false
+func getDirsFromArgs(args []string) (d dirs, err error) {
+	if len(args) != 4 { //args[0] is always the program
+		return d, errors.New("must specify exactly three directories: CSV_INPUT, JSON_OUTPUT, ERROR_OUPUT")
 	}
-	return dirs{args[0], args[1], args[2]}, true
+	var in, out, errDir string
+	if in, err = filepath.Abs(args[1]); err != nil {
+		return d, err
+	}
+	if out, err = filepath.Abs(args[2]); err != nil {
+		return d, err
+	}
+	if errDir, err = filepath.Abs(args[3]); err != nil {
+		return d, err
+	}
+	return dirs{in, out, errDir}, nil
 }
 
 func (d *dirs) errPath(filename string) string {
 	return filepath.Join(d.err, filepath.Base(filename))
 }
 func (d *dirs) outPath(filename string) string {
+	filename = strings.TrimSuffix(filename, ".csv") + ".json"
 	return filepath.Join(d.out, filepath.Base(filename))
 }
 func (d *dirs) inPath(filename string) string {

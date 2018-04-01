@@ -8,19 +8,19 @@ import (
 type validationError string
 
 const (
+	errBadFirst            validationError = "missing or invalid first name: must be between 1 and 15 characters"
+	errBadMiddle           validationError = "invalid middle name: must be between 0 and 15 characters"
+	errBadLast             validationError = "missing or invalid last name: must be between 1 and 15 characters"
+	errBadPhone            validationError = "missing or invalid phone #: must be in the form xxx-xxx-xxxx, where x are digits"
+	errBadID               validationError = "missing or invalid id: must be an eight-digit positive integer"
+	errWrongNumberOfFields validationError = "wrong number of fields: line must have exactly five fields: " +
+		"INTERNAL_ID, FIRST_NAME, MIDDLE_NAME, LAST_NAME, PHONE_NUM"
+
 	smallest8Digit = 10000000
 	largest8Digit  = smallest8Digit*10 - 1
 
 	//ID, First, Middle, Last, Phone
 	FIELDS_PER_RECORD = 5
-
-	errBadFirst            validationError = "first name must be between 1 and 15 characters"
-	errBadMiddle           validationError = "middle name must be between 0 and 15 characters"
-	errBadLast             validationError = "last name must be between 1 and 15 characters"
-	errBadPhone            validationError = "phone must be in the form xxx-xxx-xxxx, where x are digits"
-	errBadID               validationError = "UID must be an eight-digit positive integer"
-	errWrongNumberOfFields validationError = "line must have exactly five fields: " +
-		"INTERNAL_ID, FIRST_NAME, MIDDLE_NAME, LAST_NAME, PHONE_NUM"
 )
 
 type Record struct {
@@ -52,7 +52,12 @@ func toRecord(fields []string) (rec Record, err error) {
 	case !validPhone(phone):
 		return rec, errBadPhone
 	default:
-		return Record{ID: id, First: first, Middle: middle, Last: last, Phone: phone}, nil
+		rec = Record{
+			ID:    id,
+			First: first, Middle: middle, Last: last,
+			Phone: phone,
+		}
+		return rec, nil
 	}
 }
 func validFirst(name string) bool {
