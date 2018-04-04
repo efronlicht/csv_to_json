@@ -12,35 +12,45 @@ import (
 
 //integration test. sets Os.Args manually and runs main
 func Test_main(t *testing.T) {
-	const testCSVData = "INTERNAL_ID,FIRST_NAME,MIDDLE_NAME,LAST_NAME,PHONE_NUM\n" +
+	const testCSVData = "INTERNAL_ID,FIRST_NAME,MIDDLE_NAME,LAST_NAME,PHONE_NUM" +
 		"\n" + "12345678,john,q,smith,555-555-5555" +
 		"\n" + "55555555,,,,"
 
-	const wantErrorData = ERROR_HEADER + "\n" + "3," + string(errBadFirst)
-	const fileName = "test.csv"
+	const (
+		wantErrorData = ERROR_HEADER + "\n" + "3," + string(errBadFirst)
+		fileName      = "test.csv"
+		inDir         = "test_in"
+		outDir        = "test_out"
+		errDir        = "test_err"
+	)
 
-	wantRecords := []Record{{ID: 12345678, First: "john", Middle: "q", Last: "smith", Phone: "555-555-5555"}}
+	wantRecords := []Record{{
+		ID:    12345678,
+		First: "john", Middle: "q", Last: "smith",
+		Phone: "555-555-5555",
+	}}
 
 	var d dirs
 	var err error
-	if d.in, err = ioutil.TempDir("", "test_in"); err != nil {
+	if d.in, err = ioutil.TempDir("", inDir); err != nil {
 		t.Error(err)
 	}
+
 	defer os.RemoveAll(d.in)
-	if d.out, err = ioutil.TempDir("", "test_out"); err != nil {
+	if d.out, err = ioutil.TempDir("", outDir); err != nil {
 		t.Error(err)
 	}
+
 	defer os.RemoveAll(d.out)
-
-	if d.err, err = ioutil.TempDir("", "test_errs"); err != nil {
+	if d.err, err = ioutil.TempDir("", errDir); err != nil {
 		t.Error(err)
 	}
 
-	ioutil.WriteFile(filepath.Join(d.in, "test.csv"), []byte(testCSVData), 0666)
+	ioutil.WriteFile(filepath.Join(d.in, fileName), []byte(testCSVData), 0666)
 
 	os.Args = []string{"csv_to_json.exe", d.in, d.out, d.err}
 
-	is_test = true
+	isTest = true
 	main()
 	gotJSONData, _ := ioutil.ReadFile(d.outPath(fileName))
 

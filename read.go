@@ -14,7 +14,7 @@ import (
 
 //findNewCSVS is a coroutine that periodically scans a directory for new files ending in .csv,
 //sending unique filenames to the out channel.
-//this function does not return and panics on filesystem errors
+//this function does not return and calls log.Fatal on filesystem errors
 func findNewCSVs(dir string, out chan<- string, timeout time.Duration) {
 	seen := make(set.String)
 	defer close(out)

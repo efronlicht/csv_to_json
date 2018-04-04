@@ -9,27 +9,28 @@ import (
 	"time"
 )
 
-const (
+const ( // these are the only global variables
 	DEFAULT_TIMEOUT = time.Hour
 	TEST_TIMEOUT    = 250 * time.Millisecond
 )
 
-var is_test = false
+var isTest = false
 
 func main() {
-	var timeout time.Duration
-	if is_test {
+	timeout := DEFAULT_TIMEOUT
+	if isTest {
 		timeout = TEST_TIMEOUT
-	} else {
-		timeout = DEFAULT_TIMEOUT
 	}
+
 	dirs, err := getDirsFromArgs(os.Args)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := dirs.jsonToCSV(timeout); err != nil {
+	var processed int
+	if processed, err = dirs.jsonToCSV(timeout); err != nil {
 		log.Fatal(err)
 	}
+	log.Printf("processed %d csv(s) after %s", processed, timeout.String())
 }
 
 type dirs struct {
@@ -39,19 +40,20 @@ type dirs struct {
 //monitor the the input directory for new files ending in .csv.
 //for each file in the directory, create a file in outfolder writing output as JSON to
 //the output directory
-func (d dirs) jsonToCSV(timeout time.Duration) error {
+func (d dirs) jsonToCSV(timeout time.Duration) (processed int, err error) {
 	csvs := make(chan string)
 	go findNewCSVs(d.in, csvs, timeout)
 
 	for csv := range csvs { // this is an indefinite loop unless processCSV hits an error
 		if err := d.processCSV(csv); err != nil {
-			return err
+			return processed, err
 			// this is not especially fail-tolerant;
 			// a problem interfacing with the OS on any given file
 			// will kill the whole program.
 		}
+		processed++
 	}
-	return nil
+	return processed, nil
 }
 
 //processCSV processes the indivudal CSV specified by path
@@ -78,10 +80,10 @@ func (d dirs) processCSV(path string) error {
 	return nil
 }
 
-/*deleteCSV deletes a file if and only if it's path ends in .csv
-this isn't really necessary, as we guarantee our paths end in '.csv' otherwhere in the program,
-but it never hurts to have a little extra protection when you're working with
-the filesystem*/
+//deleteCSV deletes a file if and only if it's path ends in .csv
+//this isn't really necessary, as we guarantee our paths end in '.csv' otherwhere in the program,
+//but it never hurts to have a little extra protection when you're working with
+//the filesystem
 func deleteCSV(path string) error {
 	if filepath.Ext(path) != ".csv" {
 		return errors.New("called deleteCSV on a filename that doens't end in .csv")
